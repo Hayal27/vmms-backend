@@ -9,7 +9,6 @@ services:
       MYSQL_DATABASE: ${DB_NAME:-vmms}
       MYSQL_USER: ${DB_USER:-vmms_user}
       MYSQL_PASSWORD: ${DB_PASSWORD:-vmms_password_change_me}
-      MYSQL_ROOT_HOST: '%'
     ports:
       - "${DB_PORT:-3306}:3306"
     volumes:

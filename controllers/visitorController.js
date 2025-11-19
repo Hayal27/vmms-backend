@@ -9,7 +9,13 @@ const BaseController = require('./BaseController');
 const ValidationService = require('../services/ValidationService');
 const AppConfig = require('../config/appConfig');
 const QRCode = require('qrcode');
-const { v4: uuidv4 } = require('uuid');
+
+// Dynamic import for ESM uuid module
+let uuidv4;
+(async () => {
+  const uuid = await import('uuid');
+  uuidv4 = uuid.v4;
+})();
 
 class VisitorController extends BaseController {
   /**
