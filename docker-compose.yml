@@ -1,0 +1,76 @@
+services:
+  # MySQL Database Service
+  database:
+    image: mysql:8.0
+    container_name: vmms-backend-database
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_password_change_me}
+      MYSQL_DATABASE: ${DB_NAME:-vmms}
+      MYSQL_USER: ${DB_USER:-vmms_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-vmms_password_change_me}
+      MYSQL_ROOT_HOST: '%'
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./models/vmms.sql:/docker-entrypoint-initdb.d/vmms.sql
+    networks:
+      - vmms-backend-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-u", "root", "-p${DB_ROOT_PASSWORD:-root_password_change_me}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Node.js Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vmms-backend-api
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${BACKEND_PORT:-5000}
+      DB_HOST: ${DB_HOST:-database}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_NAME: ${DB_NAME:-vmms}
+      DB_USER: ${DB_USER:-vmms_user}
+      DB_PASSWORD: ${DB_PASSWORD:-vmms_password_change_me}
+      SESSION_SECRET: ${SESSION_SECRET:-your-session-secret-change-me}
+      JWT_SECRET: ${JWT_SECRET:-your-jwt-secret-change-me}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3001}
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      EMAIL_USER: ${EMAIL_USER:-your-email@gmail.com}
+      EMAIL_PASS: ${EMAIL_PASS:-your-app-password}
+      FILE_UPLOAD_LIMIT: ${FILE_UPLOAD_LIMIT:-50mb}
+      QR_CODE_SIZE: ${QR_CODE_SIZE:-200}
+      ORGANIZATION_NAME: ${ORGANIZATION_NAME:-VMMS}
+      ORGANIZATION_LOGO_URL: ${ORGANIZATION_LOGO_URL:-}
+    ports:
+      - "${BACKEND_PORT:-5000}:5000"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+    networks:
+      - vmms-backend-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  vmms-backend-network:
+    driver: bridge
